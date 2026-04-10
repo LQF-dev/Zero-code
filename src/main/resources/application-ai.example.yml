@@ -1,0 +1,31 @@
+# application-ai.example.yml: AI 模型与推理服务专用配置模板（不含隐私）
+spring:
+  devtools:
+    restart:
+      enabled: false
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: ${ZERO_CODE_LLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+      api-key: ${ZERO_CODE_LLM_API_KEY:replace_with_your_api_key}
+      model-name: ${ZERO_CODE_LLM_MODEL_NAME:glm-4.7}
+      max-tokens: ${ZERO_CODE_LLM_MAX_TOKENS:8192}
+      log-requests: true
+      log-responses: true
+
+    streaming-chat-model:
+      base-url: ${ZERO_CODE_LLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+      api-key: ${ZERO_CODE_LLM_API_KEY:replace_with_your_api_key}
+      model-name: ${ZERO_CODE_LLM_MODEL_NAME:glm-4.7}
+      timeout: 240s
+      max-tokens: ${ZERO_CODE_LLM_STREAM_MAX_TOKENS:32768}
+      log-requests: true
+      log-responses: true
+      max-retries: 3
+
+    reasoning-model-name: ${ZERO_CODE_REASONING_MODEL_NAME:glm-4.7}
+    reasoning-max-tokens: ${ZERO_CODE_REASONING_MAX_TOKENS:32768}
+    reasoning-return-thinking: true
+    reasoning-send-thinking: true
+    reasoning-thinking-field: reasoning_content
