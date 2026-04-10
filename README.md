@@ -2,6 +2,8 @@
 
 # Zero Code Studio
 
+<img src="docs/images/logo-ai.svg" alt="Zero Code Studio Logo" width="140" />
+
 **一个面向零代码场景的 AI 网站生成平台**
 
 基于 LangChain4j 与 LangGraph4j 构建，支持 LangChain4j 工具调用模式生成代码与 Workflow 模式编排生成，覆盖「生成 → 修改 → 预览 → 部署」完整链路。
@@ -363,9 +365,9 @@ MIT
 ## Author
 
 **Eric**
-学历：UNSW IT 硕士 + 西南大学本科。
-职业：Java 后端程序员。
-博客：[代码丰](https://blog.csdn.net/qq_44716086)。
-微信号：LQF-dev（随时欢迎骚扰）。
+- 学历：UNSW IT 硕士 + 西南大学本科。
+- 职业：Java 后端程序员。
+- 博客：[代码丰](https://blog.csdn.net/qq_44716086)。
+- 微信号：LQF-dev（随时欢迎骚扰）。
 
-如果这个项目对你有帮助，欢迎点个 ⭐
+- 如果这个项目对你有帮助，欢迎点个 ⭐
