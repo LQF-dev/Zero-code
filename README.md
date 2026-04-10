@@ -48,6 +48,7 @@ Zero Code Studio 是一个以工程化为目标的 AI 代码生成平台。
 ### 1) LLM 工程能力
 
 - 幂等防重：基于 `clientRequestId` 防止浏览器 SSE 自动重连造成重复请求LLM。
+- 工作流编排：支持基于 `LangGraph4j` 对 LLM 行为进行工作流级编排（路由、生成、质检、构建）。
 - 工具调用：支持多工具协同执行，完整保留工具请求与结果。
 - 推理过程落库：支持思考内容（reasoning）与工具轨迹分层展示。
 - 多模型配置：支持 OpenAI 兼容接口模型切换（如 DeepSeek / Qwen / GLM）。
