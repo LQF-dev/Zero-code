@@ -36,6 +36,8 @@ build/
 ### CUSTOM ###
 src/main/resources/application.yml
 src/main/resources/application-ai.yml
+zero-code-microservice/**/src/main/resources/application*.yml
+!zero-code-microservice/**/src/main/resources/application*.example.yml
 
 tmp/
 temp/

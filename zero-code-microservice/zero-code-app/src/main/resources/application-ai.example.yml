@@ -1,0 +1,102 @@
+# application-ai.example.yml: AI 模型与推理服务专用配置模板（不含敏感信息）
+spring:
+  devtools:
+    restart:
+      enabled: false
+
+# AI
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: replace_with_your_llm_api_key
+      model-name: deepseek-chat
+      log-requests: true
+      log-responses: true
+      timeout: 120s
+      connect-timeout: 15s
+      max-tokens: 8192
+      max-retries: 3
+    #      strict-json-schema: true
+    #      response-format: json_object
+    streaming-chat-model:
+      base-url: https://api.deepseek.com
+      api-key: replace_with_your_llm_api_key
+      model-name: deepseek-reasoner
+      timeout: 240s
+      max-tokens: 8192
+      log-requests: true
+      log-responses: true
+      max-retries: 3
+
+# ==========================================================
+# 供应商切换模板（按需复制到上方 langchain4j.open-ai 生效）
+# 你只需要替换 API KEY；Secret Key 在 OpenAI 兼容模式下通常不需要
+# 如你的网关要求 Secret Key，可放在环境变量 ZERO_CODE_LLM_SECRET_KEY 供自定义网关使用
+# ==========================================================
+
+# -------------------------------
+# [模板 A] Qwen（阿里云百炼 OpenAI 兼容）
+# 官方兼容 base-url（中国内地）：https://dashscope.aliyuncs.com/compatible-mode/v1
+# -------------------------------
+#langchain4j:
+#  open-ai:
+#    chat-model:
+#      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#      api-key: replace_with_your_qwen_api_key
+#      # secret-key: ${QWEN_SECRET_KEY:optional}
+#      model-name: qwen-plus-latest
+#      max-tokens: 8192
+#      log-requests: true
+#      log-responses: true
+#
+#    streaming-chat-model:
+#      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+#      api-key: replace_with_your_qwen_api_key
+#      # secret-key: ${QWEN_SECRET_KEY:optional}
+#      model-name: qwen-plus-latest
+#      timeout: 240s
+#      max-tokens: 8192
+#      log-requests: true
+#      log-responses: true
+#      max-retries: 3
+#
+#    reasoning-model-name: qwen-plus-latest
+#    reasoning-max-tokens: 8192
+#    reasoning-return-thinking: false
+#    reasoning-send-thinking: false
+#    reasoning-thinking-field: reasoning_content
+
+# -------------------------------
+# [模板 B] GLM（智谱 OpenAI 兼容）
+# 官方 chat.completions 地址示例：
+# https://open.bigmodel.cn/api/paas/v4/chat/completions
+# 对应 base-url 填到 /api/paas/v4
+# -------------------------------
+#langchain4j:
+#  open-ai:
+#    chat-model:
+#      base-url: https://open.bigmodel.cn/api/paas/v4
+#      api-key: replace_with_your_glm_api_key
+#      # secret-key: ${GLM_SECRET_KEY:optional}
+#      model-name: glm-4.7
+#      max-tokens: 8192
+#      log-requests: true
+#      log-responses: true
+#
+#    streaming-chat-model:
+#      base-url: https://open.bigmodel.cn/api/paas/v4
+#      api-key: replace_with_your_glm_api_key
+#      # secret-key: ${GLM_SECRET_KEY:optional}
+#      model-name: glm-4.7
+#      timeout: 240s
+#      max-tokens: 32768
+#      log-requests: true
+#      log-responses: true
+#      max-retries: 3
+#
+#    reasoning-model-name: glm-4.7
+#    reasoning-max-tokens: 32768
+#    reasoning-return-thinking: true
+#    reasoning-send-thinking: true
+#    reasoning-thinking-field: reasoning_content

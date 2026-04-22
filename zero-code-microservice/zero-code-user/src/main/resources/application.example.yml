@@ -1,0 +1,50 @@
+# application.example.yml: zero-code-user 配置模板（不含敏感信息）
+spring:
+  application:
+    name: zero-code-user
+  session:
+    store-type: redis
+    timeout: 2592000
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/replace_with_your_db_name
+    username: replace_with_your_db_username
+    password: replace_with_your_db_password
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: replace_with_your_redis_password
+      ttl: 3600
+  profiles:
+    active: local
+
+server:
+  port: 8124
+  servlet:
+    context-path: /api
+    session:
+      cookie:
+        max-age: 2592000
+
+springdoc:
+  group-configs:
+    - group: default
+      packages-to-scan: com.ai.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+dubbo:
+  registry:
+    address: nacos://127.0.0.1:8848?username=replace_with_your_nacos_username&password=replace_with_your_nacos_password
+    register-mode: instance
+  protocol:
+    name: tri
+    port: 50051
+  consumer:
+    timeout: 60000
+  provider:
+    timeout: 60000

@@ -1,0 +1,15 @@
+package com.ai.mapper;
+
+
+import com.ai.model.entity.User;
+import com.mybatisflex.core.BaseMapper;
+
+
+/**
+ * 用户 映射层。
+ *
+ * @author Luo QinFeng
+ */
+public interface UserMapper extends BaseMapper<User> {
+
+}

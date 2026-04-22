@@ -1,0 +1,29 @@
+# application.example.yml: zero-code-screenshot 配置模板（不含敏感信息）
+spring:
+  application:
+    name: zero-code-screenshot
+
+server:
+  port: 8127
+  servlet:
+    context-path: /api
+
+dubbo:
+  registry:
+    address: nacos://127.0.0.1:8848?username=replace_with_your_nacos_username&password=replace_with_your_nacos_password
+    register-mode: instance
+  protocol:
+    name: tri
+    port: 50052
+  consumer:
+    timeout: 120000
+  provider:
+    timeout: 120000
+
+cos:
+  client:
+    host: https://replace-with-your-cos-host
+    secretId: replace_with_your_cos_secret_id
+    secretKey: replace_with_your_cos_secret_key
+    region: replace_with_your_cos_region
+    bucket: replace_with_your_cos_bucket
