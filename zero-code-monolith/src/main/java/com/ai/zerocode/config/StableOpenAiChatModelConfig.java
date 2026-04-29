@@ -31,6 +31,8 @@ public class StableOpenAiChatModelConfig {
 
     private Boolean logResponses = true;
 
+    private Map<String, Object> customParameters;
+
     @Bean("stableOpenAiChatModel")
     public ChatModel stableOpenAiChatModel() {
         return OpenAiChatModel.builder()
@@ -40,6 +42,7 @@ public class StableOpenAiChatModelConfig {
                 .maxTokens(maxTokens)
                 .timeout(Duration.ofSeconds(120))
                 .maxRetries(2)
+                .customParameters(customParameters)
                 // 不要压缩 通过禁用压缩规避代理/网络环境下的响应截断解压异常。
                 .customHeaders(Map.of("Accept-Encoding", "identity"))
                 .logRequests(Boolean.TRUE.equals(logRequests))

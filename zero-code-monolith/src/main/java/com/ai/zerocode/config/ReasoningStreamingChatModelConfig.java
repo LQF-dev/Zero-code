@@ -7,8 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
@@ -38,7 +40,7 @@ public class ReasoningStreamingChatModelConfig {
     /**
      * 推理流式模型名（可通过配置覆盖）
      */
-    @Value("${langchain4j.open-ai.reasoning-model-name:deepseek-reasoner}")
+    @Value("${langchain4j.open-ai.reasoning-model-name:${langchain4j.open-ai.streaming-chat-model.model-name:deepseek-v4-pro}}")
     private String reasoningModelName;
 
     /**
@@ -66,11 +68,23 @@ public class ReasoningStreamingChatModelConfig {
     private String reasoningThinkingField;
 
     /**
+     * DeepSeek V4 思考开关。留空则不发送 thinking 参数，便于兼容其它 OpenAI 格式供应商。
+     */
+    @Value("${langchain4j.open-ai.reasoning-thinking-type:}")
+    private String reasoningThinkingType;
+
+    /**
+     * DeepSeek V4 思考强度（high/max）。留空则使用供应商默认值。
+     */
+    @Value("${langchain4j.open-ai.reasoning-effort:}")
+    private String reasoningEffort;
+
+    /**
      * 推理流式模型（用于 Vue 项目生成，带工具调用）
      */
     @Bean
     public StreamingChatModel reasoningStreamingChatModel() {
-        return OpenAiStreamingChatModel.builder()
+        OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder builder = OpenAiStreamingChatModel.builder()
                 .apiKey(apiKey)
                 .baseUrl(baseUrl)
                 .modelName(reasoningModelName)
@@ -84,7 +98,16 @@ public class ReasoningStreamingChatModelConfig {
                 // 禁用压缩，降低代理/DNS 抖动时的异常概率
                 .customHeaders(Map.of("Accept-Encoding", "identity"))
                 .logRequests(Boolean.TRUE.equals(logRequests))
-                .logResponses(Boolean.TRUE.equals(logResponses))
-                .build();
+                .logResponses(Boolean.TRUE.equals(logResponses));
+
+        if (StringUtils.hasText(reasoningEffort)) {
+            builder.reasoningEffort(reasoningEffort);
+        }
+        if (StringUtils.hasText(reasoningThinkingType)) {
+            Map<String, Object> customParameters = new HashMap<>();
+            customParameters.put("thinking", Map.of("type", reasoningThinkingType));
+            builder.customParameters(customParameters);
+        }
+        return builder.build();
     }
 }

@@ -20,6 +20,7 @@ import com.ai.zerocode.model.vo.AppVO;
 import com.ai.zerocode.ratelimiter.anotation.RateLimit;
 import com.ai.zerocode.ratelimiter.enms.RateLimitType;
 import com.ai.zerocode.service.AppService;
+import com.ai.zerocode.service.ContextCompactionService;
 import com.ai.zerocode.service.ProjectDownloadService;
 import com.ai.zerocode.service.UserService;
 import com.mybatisflex.core.paginate.Page;
@@ -60,6 +61,9 @@ public class AppController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private ContextCompactionService contextCompactionService;
     @Resource
     private RedissonClient redissonClient;
     @Resource
@@ -451,6 +455,33 @@ public class AppController {
                 ));
     }
 
+
+    /**
+     * 手动压缩对话上下文（Layer 3）。
+     * 调用 LLM 生成对话摘要，用摘要替换全部历史消息，释放 token 空间。
+     * 完整对话记录保留在 event_log 中，不会丢失。
+     *
+     * @param appId   应用 ID
+     * @param request 请求
+     * @return 是否成功压缩
+     */
+    @PostMapping("/chat/compact")
+    public BaseResponse<Boolean> compactChatContext(@RequestParam Long appId, HttpServletRequest request) {
+        // 参数校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
+        // 权限校验：只有应用所有者才能压缩
+        User loginUser = userService.getLoginUser(request);
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        if (!app.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作该应用");
+        }
+        // 构建 memoryId 并执行压缩
+        String codeGenType = app.getCodeGenType();
+        String memoryId = appId + "_" + codeGenType;
+        boolean compacted = contextCompactionService.forceCompact(memoryId);
+        return ResultUtils.success(compacted);
+    }
 
     /**
      * 应用部署

@@ -29,3 +29,7 @@ langchain4j:
     reasoning-return-thinking: true
     reasoning-send-thinking: true
     reasoning-thinking-field: reasoning_content
+    # DeepSeek V4 可设置为 enabled，并配合 reasoning-effort: high/max。
+    # 其它 OpenAI 兼容供应商如不支持 thinking 参数，请保持为空。
+    reasoning-thinking-type: ${ZERO_CODE_REASONING_THINKING_TYPE:}
+    reasoning-effort: ${ZERO_CODE_REASONING_EFFORT:}

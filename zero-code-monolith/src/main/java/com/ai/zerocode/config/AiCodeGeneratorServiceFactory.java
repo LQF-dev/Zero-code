@@ -9,6 +9,7 @@ import com.ai.zerocode.exception.ErrorCode;
 import com.ai.zerocode.model.enums.CodeGenTypeEnum;
 import com.ai.zerocode.service.ChatMemoryReplayService;
 import com.ai.zerocode.service.ChatHistoryService;
+import com.ai.zerocode.service.ContextCompactionService;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
@@ -52,6 +53,8 @@ public class AiCodeGeneratorServiceFactory {
     private ChatHistoryService chatHistoryService;
     @Resource
     private ChatMemoryReplayService chatMemoryReplayService;
+    @Resource
+    private ContextCompactionService contextCompactionService;
     @Autowired
     private ToolManager toolManager;
 
@@ -158,6 +161,10 @@ public class AiCodeGeneratorServiceFactory {
                             memoryId, chatMemory, VUE_PROJECT_REPLAY_MAX_EVENTS);
                     log.info("VUE_PROJECT memory 回放完成，memoryId={}, replayed={}", memoryId, replayed);
                 }
+                // Layer 1：调用 LLM 前持久微压缩 — 旧工具结果替换为占位符并写回 Redis 工作上下文
+                compactMemoryBeforeModelCall(memoryId);
+                // Layer 2：自动压缩 — 上下文 token 超阈值时触发 LLM 摘要压缩
+                contextCompactionService.autoCompactIfNeeded(chatMemory, memoryId);
                 yield AiServices.builder(AiCodeGeneratorService.class)
                         .streamingChatModel(reasoningStreamingChatModel)
                         .chatMemoryProvider(ignoredMemoryId -> chatMemory)
@@ -204,6 +211,12 @@ public class AiCodeGeneratorServiceFactory {
      */
     public AiCodeGeneratorService getAiCodeGeneratorService(long appId, CodeGenTypeEnum codeGenType) {
         return createAiCodeGeneratorService(appId, codeGenType);
+    }
+
+    private void compactMemoryBeforeModelCall(String memoryId) {
+        if (redisChatMemoryStore instanceof CompactingChatMemoryStore compactingChatMemoryStore) {
+            compactingChatMemoryStore.compactAndPersist(memoryId);
+        }
     }
 
 }

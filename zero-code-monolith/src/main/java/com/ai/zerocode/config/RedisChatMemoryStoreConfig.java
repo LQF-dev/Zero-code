@@ -28,6 +28,7 @@ public class RedisChatMemoryStoreConfig {
                 .password(password)
                 .ttl(ttl)
                 .build();
-        return new SanitizingChatMemoryStore(redisChatMemoryStore);
+        // 装饰链：Redis → Sanitizing（清洗非法消息） → Compacting（微压缩旧工具结果）
+        return new CompactingChatMemoryStore(new SanitizingChatMemoryStore(redisChatMemoryStore));
     }
 }

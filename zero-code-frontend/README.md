@@ -117,6 +117,16 @@ npm install
 npm run dev
 ```
 
+### 后端接口地址切换
+
+当前前端默认访问单体后端服务，Vite 开发代理会把 `/api` 转发到 `http://localhost:8123`。
+
+- 单体模式：启动根目录后端，接口地址为 `http://localhost:8123/api`。
+- 微服务模式：将前端切到统一网关 / 聚合入口，例如 `http://localhost:8080/api`；不要把前端直接指向用户服务 `8124`、应用服务 `8125`、截图服务 `8127`。
+- 修改开发代理：编辑 `vite.config.ts`，把 `server.proxy['/api'].target` 在 `http://localhost:8123` 与 `http://localhost:8080` 之间切换。
+- 修改接口生成：编辑 `openapi2ts.config.ts`，把 `schemaPath` 在 `http://localhost:8123/api/v3/api-docs` 与 `http://localhost:8080/api/v3/api-docs` 之间切换。
+- 本地临时覆盖：新建 `.env.local` 并设置 `VITE_API_BASE_URL=http://localhost:8123/api` 或 `http://localhost:8080/api`；需要可视化编辑预览时，建议保持默认 `/api` 同源代理方式。
+
 ### 类型检查、编译和压缩
 
 ```sh

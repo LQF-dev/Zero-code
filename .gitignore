@@ -34,10 +34,28 @@ build/
 
 
 ### CUSTOM ###
-src/main/resources/application.yml
-src/main/resources/application-ai.yml
+# Runtime config with local secrets
+**/src/main/resources/application.yml
+**/src/main/resources/application-*.yml
+!**/src/main/resources/application.example.yml
+!**/src/main/resources/application-*.example.yml
 zero-code-microservice/**/src/main/resources/application*.yml
 !zero-code-microservice/**/src/main/resources/application*.example.yml
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+cookies.txt
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.csr
 
 tmp/
 temp/

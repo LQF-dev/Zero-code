@@ -311,6 +311,16 @@ npm run dev
 - 前端：`http://localhost:5173`
 - 后端：`http://localhost:8123/api`
 
+### 前端接口地址切换
+
+当前暂时使用单体后端服务，前端开发代理和接口文档生成地址都指向单体服务端口 `8123`。
+
+- 单体模式：后端启动根目录 Spring Boot 应用，接口地址为 `http://localhost:8123/api`。
+- 微服务模式：前端应统一访问微服务网关 / 聚合入口，例如 `http://localhost:8080/api`，不要直接访问 `8124`、`8125`、`8127` 等单个服务端口。
+- 开发代理切换：修改 `zero-code-frontend/vite.config.ts` 中 `/api` 的 `target`，单体为 `http://localhost:8123`，微服务为 `http://localhost:8080`。
+- 接口代码生成切换：修改 `zero-code-frontend/openapi2ts.config.ts` 中的 `schemaPath`，单体为 `http://localhost:8123/api/v3/api-docs`，微服务为 `http://localhost:8080/api/v3/api-docs`。
+- 临时覆盖方式：在 `zero-code-frontend/.env.local` 设置 `VITE_API_BASE_URL=http://localhost:8123/api` 或 `http://localhost:8080/api`；如需使用可视化编辑预览，优先保持默认同源 `/api` 并通过 Vite 代理切换后端。
+
 ---
 
 ## 模型配置
