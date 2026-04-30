@@ -61,6 +61,38 @@
                 <a-avatar :src="aiAvatar" />
               </div>
               <div class="message-content">
+                <!-- 计划进度面板：仅在最后一条AI消息上展示 -->
+                <div v-if="currentPlan.length > 0 && index === messages.length - 1" class="plan-panel">
+                  <div class="plan-header">
+                    <span class="plan-title">生成计划</span>
+                    <span class="plan-progress">{{ currentPlan.filter(i => i.status === 'completed').length }}/{{ currentPlan.length }}</span>
+                  </div>
+                  <div class="plan-items">
+                    <div
+                      v-for="item in currentPlan"
+                      :key="item.id"
+                      class="plan-item"
+                      :class="{
+                        'plan-item-completed': item.status === 'completed',
+                        'plan-item-active': item.status === 'in_progress',
+                      }"
+                    >
+                      <span class="plan-item-icon">
+                        <template v-if="item.status === 'completed'">&#10003;</template>
+                        <template v-else-if="item.status === 'in_progress'">
+                          <span class="plan-item-spinner"></span>
+                        </template>
+                        <template v-else>
+                          <span class="plan-item-dot"></span>
+                        </template>
+                      </span>
+                      <span class="plan-item-text">{{ item.text }}</span>
+                    </div>
+                  </div>
+                  <div class="plan-bar">
+                    <div class="plan-bar-fill" :style="{ width: (currentPlan.filter(i => i.status === 'completed').length / currentPlan.length * 100) + '%' }"></div>
+                  </div>
+                </div>
                 <div v-if="message.processEvents?.length" class="process-timeline">
                   <div
                     v-for="eventItem in message.processEvents"
@@ -81,8 +113,13 @@
                   </div>
                 </div>
                 <div v-if="message.content" class="final-reply">
-                  <div class="final-reply-title">最终回复</div>
-                  <MarkdownRenderer :content="message.content" />
+                  <div class="final-reply-header" @click="toggleFinalReply(index)">
+                    <span class="final-reply-toggle">{{ expandedReplies.has(index) ? '▼' : '▶' }}</span>
+                    <span class="final-reply-title">最终回复</span>
+                  </div>
+                  <div v-show="expandedReplies.has(index)" class="final-reply-body">
+                    <MarkdownRenderer :content="message.content" />
+                  </div>
                 </div>
                 <div v-if="message.loading" class="loading-indicator">
                   <a-spin size="small" />
@@ -333,9 +370,25 @@ const TOOL_NAME_LABEL_MAP: Record<string, string> = {
   modifyFile: '修改文件',
   deleteFile: '删除文件',
   exit: '退出工具调用',
+  updatePlan: '更新计划',
 }
 
+interface PlanItem {
+  id: string
+  text: string
+  status: string
+}
+
+// 当前生成计划状态（跨消息保持，用于面板渲染）
+const currentPlan = ref<PlanItem[]>([])
+
 const messages = ref<Message[]>([])
+const expandedReplies = ref<Set<number>>(new Set())
+const toggleFinalReply = (index: number) => {
+  const s = new Set(expandedReplies.value)
+  if (s.has(index)) { s.delete(index) } else { s.add(index) }
+  expandedReplies.value = s
+}
 const userInput = ref('')
 const isGenerating = ref(false)
 const messagesContainer = ref<HTMLElement>()
@@ -625,6 +678,22 @@ const findLatestToolEventIndexByCallId = (msg: Message, toolCallId?: string) => 
 }
 
 const appendStructuredToolEvent = (msg: Message, chunk: ToolRequestStreamChunk | ToolExecutedStreamChunk) => {
+  // updatePlan 拦截：解析 items 更新计划面板，不创建 processEvent
+  if (chunk.name === 'updatePlan') {
+    const argStr = chunk.arguments || ''
+    if (argStr) {
+      try {
+        const parsed = JSON.parse(argStr)
+        const items: PlanItem[] = parsed.items || parsed
+        if (Array.isArray(items)) {
+          currentPlan.value = items
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return
+  }
   const toolDisplayName = TOOL_NAME_LABEL_MAP[chunk.name || ''] || chunk.name || '工具'
   if (chunk.type === 'tool_request') {
     const events = ensureProcessEvents(msg)
@@ -1568,17 +1637,130 @@ onUnmounted(() => {
 
 .final-reply {
   margin-top: 8px;
-  padding: 10px;
   background: #fff;
   border: 1px solid #e8e8e8;
   border-radius: 10px;
+  overflow: hidden;
+}
+
+.final-reply-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.final-reply-header:hover {
+  background: #fafafa;
+}
+
+.final-reply-toggle {
+  font-size: 10px;
+  color: #8c8c8c;
 }
 
 .final-reply-title {
   font-size: 12px;
   font-weight: 600;
   color: #262626;
-  margin-bottom: 6px;
+}
+
+.final-reply-body {
+  padding: 0 10px 10px;
+}
+
+.plan-panel {
+  margin-bottom: 10px;
+  padding: 12px;
+  background: #f0f7ff;
+  border: 1px solid #d0e3f7;
+  border-radius: 10px;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.plan-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.plan-progress {
+  font-size: 12px;
+  color: #666;
+}
+
+.plan-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.plan-item-completed {
+  color: #52c41a;
+}
+
+.plan-item-active {
+  color: #1677ff;
+  font-weight: 500;
+}
+
+.plan-item-icon {
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.plan-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d9d9d9;
+}
+
+.plan-item-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #1677ff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: plan-spin 0.8s linear infinite;
+}
+
+@keyframes plan-spin {
+  to { transform: rotate(360deg); }
+}
+
+.plan-bar {
+  height: 4px;
+  background: #e6e6e6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.plan-bar-fill {
+  height: 100%;
+  background: #1677ff;
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 .message-avatar {

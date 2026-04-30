@@ -91,6 +91,17 @@ public class JsonMessageStreamHandler {
                 String toolName = toolRequestMessage.getName();
                 if (toolId != null && !seenToolIds.contains(toolId)) {
                     seenToolIds.add(toolId);
+                    // updatePlan：发送结构化 JSON，前端用于渲染计划进度面板
+                    if ("updatePlan".equals(toolName)) {
+                        accumulator.addToolRequest(
+                                toolId, toolName, toolRequestMessage.getArguments(), "", chunk);
+                        return JSONUtil.createObj()
+                                .set("type", "tool_request")
+                                .set("id", toolId)
+                                .set("name", toolName)
+                                .set("arguments", toolRequestMessage.getArguments())
+                                .toString();
+                    }
                     BaseTool tool = toolManager.getTool(toolName);
                     String output = tool.generateToolRequestResponse();
                     accumulator.appendAssistant(output);
@@ -107,8 +118,22 @@ public class JsonMessageStreamHandler {
             }
             case TOOL_EXECUTED -> {
                 ToolExecutedMessage toolExecutedMessage = JSONUtil.toBean(chunk, ToolExecutedMessage.class);
-                JSONObject jsonObject = JSONUtil.parseObj(toolExecutedMessage.getArguments());
                 String toolName = toolExecutedMessage.getName();
+                // updatePlan：发送结构化 JSON，不作为纯文本追加到助手内容
+                if ("updatePlan".equals(toolName)) {
+                    accumulator.addToolResult(
+                            toolExecutedMessage.getId(), toolName,
+                            toolExecutedMessage.getArguments(),
+                            toolExecutedMessage.getResult(), "", chunk);
+                    return JSONUtil.createObj()
+                            .set("type", "tool_executed")
+                            .set("id", toolExecutedMessage.getId())
+                            .set("name", toolName)
+                            .set("arguments", toolExecutedMessage.getArguments())
+                            .set("result", toolExecutedMessage.getResult())
+                            .toString();
+                }
+                JSONObject jsonObject = JSONUtil.parseObj(toolExecutedMessage.getArguments());
                 BaseTool tool = toolManager.getTool(toolName);
                 String result = tool.generateToolExecutedResult(jsonObject);
                 String output = String.format("\n\n%s\n\n", result);

@@ -62,11 +62,11 @@ public class FileDirReadTool extends BaseTool {
             structure.append("项目目录结构 (").append(displayRoot).append("):\n");
             appendTree(targetDir, targetDir, structure);
             structure.append("\n提示: 路径均为相对路径，目录以 '/' 结尾。");
-            return structure.toString();
+            return withNag(structure.toString(), appId);
         } catch (Exception e) {
             String errorMessage = "读取目录结构失败: " + relativeDirPath + ", 错误: " + e.getMessage();
             log.error(errorMessage, e);
-            return errorMessage;
+            return withNag(errorMessage, appId);
         }
     }
 

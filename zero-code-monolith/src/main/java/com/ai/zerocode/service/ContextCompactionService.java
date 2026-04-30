@@ -28,9 +28,10 @@ public class ContextCompactionService {
 
     /**
      * 触发自动压缩的 token 估算阈值。
+     * DeepSeek V4-Pro 具备较长上下文，自动摘要压缩作为兜底能力，不应过早触发。
      * 粗略估算：总字符数 / 3（中英混合场景）。
      */
-    private static final int TOKEN_THRESHOLD = 2000;
+    private static final int TOKEN_THRESHOLD = 30000;
 
     /**
      * 用于生成摘要的轻量模型（非推理模型，节省成本）。

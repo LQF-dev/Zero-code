@@ -24,14 +24,14 @@ public class CompactingChatMemoryStore implements ChatMemoryStore {
 
     /**
      * 保留最近多少条工具结果不压缩。
-     * 对应约 1-2 轮工具交互（每轮可能包含多次工具调用）。
+     * 对应约数轮工具交互，避免 Vue 项目生成过程中丢失最近文件读写细节。
      */
-    private static final int KEEP_RECENT_RESULTS = 3;
+    private static final int KEEP_RECENT_RESULTS = 8;
 
     /**
      * 工具结果内容低于此长度不压缩（短结果压缩没有意义）。
      */
-    private static final int MIN_COMPRESS_LENGTH = 100;
+    private static final int MIN_COMPRESS_LENGTH = 300;
 
     public CompactingChatMemoryStore(ChatMemoryStore delegate) {
         this.delegate = delegate;

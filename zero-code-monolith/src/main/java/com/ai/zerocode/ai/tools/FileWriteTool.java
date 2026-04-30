@@ -52,7 +52,7 @@ public class FileWriteTool extends BaseTool {
                 byte[] existingBytes = Files.readAllBytes(path);
                 if (java.util.Arrays.equals(existingBytes, newBytes)) {
                     log.info("跳过写入（内容未变化）: {}", path.toAbsolutePath());
-                    return "文件内容无变化，已跳过写入: " + relativeFilePath;
+                    return withNag("文件内容无变化，已跳过写入: " + relativeFilePath, appId);
                 }
             }
             // 写入文件内容
@@ -61,11 +61,11 @@ public class FileWriteTool extends BaseTool {
                     StandardOpenOption.TRUNCATE_EXISTING);
             log.info("成功写入文件: {}", path.toAbsolutePath());
             // 注意要返回相对路径，不能让 AI 把文件绝对路径返回给用户
-            return "文件写入成功: " + relativeFilePath;
+            return withNag("文件写入成功: " + relativeFilePath, appId);
         } catch (IOException e) {
             String errorMessage = "文件写入失败: " + relativeFilePath + ", 错误: " + e.getMessage();
             log.error(errorMessage, e);
-            return errorMessage;
+            return withNag(errorMessage, appId);
         }
     }
 
