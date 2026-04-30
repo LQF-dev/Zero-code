@@ -1,5 +1,6 @@
 package com.ai.zerocode.service;
 
+import com.ai.zerocode.config.ContextCompactionProperties;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -26,12 +27,7 @@ import java.util.List;
 @Service
 public class ContextCompactionService {
 
-    /**
-     * 触发自动压缩的 token 估算阈值。
-     * DeepSeek V4-Pro 具备较长上下文，自动摘要压缩作为兜底能力，不应过早触发。
-     * 粗略估算：总字符数 / 3（中英混合场景）。
-     */
-    private static final int TOKEN_THRESHOLD = 30000;
+    private final ContextCompactionProperties compactionProperties;
 
     /**
      * 用于生成摘要的轻量模型（非推理模型，节省成本）。
@@ -45,12 +41,18 @@ public class ContextCompactionService {
 
     private static final String SUMMARY_PROMPT = """
             请总结以下对话的关键信息，确保包含：
-            1) 已完成的操作（创建/修改/删除了哪些文件）
+            1) 已完成的操作（创建/修改/删除了哪些文件），每次修改必须记录【修改前的原始值 → 修改后的新值】的完整对照，
+               例如：「将首页标题从『静夜思』修改为『测试』」，而不是只写「将标题修改为『测试』」。
+               这一点非常重要，因为用户可能需要回退到之前的状态，必须保留原始值。
             2) 当前项目状态（项目结构、关键组件）
             3) 用户的核心需求和偏好
             4) 尚未完成的任务或待解决的问题
+            5) 关键数据的变更历史链（按时间顺序），包括文本内容、配置参数、样式属性等的前后值
 
-            要求简洁但不遗漏关键细节，使用中文回复。
+            要求：
+            - 对于每一处内容修改，必须同时保留修改前和修改后的值，确保可回溯可回退
+            - 使用「A → B」格式记录变更对照
+            - 简洁但不遗漏任何修改细节，使用中文回复
 
             对话内容：
             """;
@@ -58,8 +60,10 @@ public class ContextCompactionService {
     private static final String COMPACT_MARKER = "[对话已压缩，完整记录保留在事件日志中]";
 
     public ContextCompactionService(
+            ContextCompactionProperties compactionProperties,
             @Qualifier("openAiChatModel") ChatModel chatModel,
             ChatMemoryStore redisChatMemoryStore) {
+        this.compactionProperties = compactionProperties;
         this.chatModel = chatModel;
         this.chatMemoryStore = redisChatMemoryStore;
     }
@@ -78,12 +82,13 @@ public class ContextCompactionService {
         }
 
         int estimatedTokens = estimateTokens(messages);
-        if (estimatedTokens <= TOKEN_THRESHOLD) {
+        int threshold = compactionProperties.getTokenThreshold();
+        if (estimatedTokens <= threshold) {
             return false;
         }
 
         log.info("自动压缩触发，memoryId={}, estimatedTokens={}, threshold={}",
-                memoryId, estimatedTokens, TOKEN_THRESHOLD);
+                memoryId, estimatedTokens, threshold);
         return doCompact(chatMemory, memoryId, messages);
     }
 
@@ -133,17 +138,18 @@ public class ContextCompactionService {
     }
 
     /**
-     * 调用轻量模型生成对话摘要。
+     * 调用模型生成对话摘要。
      */
     private String generateSummary(List<ChatMessage> messages) {
-        // 将消息序列化为文本（截取最后 80000 字符避免超长）
+        // 将消息序列化为文本（截取最后 maxSummaryInputChars 字符避免超长）
         StringBuilder conversationText = new StringBuilder();
         for (ChatMessage msg : messages) {
             conversationText.append(formatMessage(msg)).append("\n");
         }
         String text = conversationText.toString();
-        if (text.length() > 80000) {
-            text = text.substring(text.length() - 80000);
+        int maxChars = compactionProperties.getMaxSummaryInputChars();
+        if (text.length() > maxChars) {
+            text = text.substring(text.length() - maxChars);
         }
 
         ChatRequest request = ChatRequest.builder()
@@ -171,13 +177,54 @@ public class ContextCompactionService {
             return "[AI] " + (aiMsg.text() != null ? aiMsg.text() : "");
         } else if (msg instanceof dev.langchain4j.data.message.ToolExecutionResultMessage toolMsg) {
             String text = toolMsg.text();
-            // 工具结果可能很长，截取前 500 字符用于摘要
-            if (text != null && text.length() > 500) {
-                text = text.substring(0, 500) + "...[截断]";
+            String toolName = toolMsg.toolName();
+            if (text != null && text.length() > 2000) {
+                // 对文件修改类工具，优先提取 oldContent/newContent 的关键差异
+                if ("modifyFile".equals(toolName) || "createFile".equals(toolName)
+                        || "deleteFile".equals(toolName) || "modifyFileContent".equals(toolName)) {
+                    text = extractModificationDetails(text);
+                } else {
+                    text = text.substring(0, 1500) + "...[截断]";
+                }
             }
-            return "[工具结果: " + toolMsg.toolName() + "] " + text;
+            return "[工具结果: " + toolName + "] " + text;
         }
         return msg.toString();
+    }
+
+    /**
+     * 从文件修改类工具结果中提取关键的修改前后信息。
+     * 优先保留 oldContent/newContent 字段，确保摘要模型能看到完整的变更对照。
+     */
+    private String extractModificationDetails(String text) {
+        StringBuilder details = new StringBuilder();
+        // 提取 oldContent
+        int oldIdx = text.indexOf("oldContent");
+        if (oldIdx == -1) oldIdx = text.indexOf("\"old\"");
+        if (oldIdx >= 0) {
+            int end = Math.min(oldIdx + 1500, text.length());
+            details.append("[修改前后内容] ").append(text, oldIdx, end);
+        }
+        // 提取 newContent
+        int newIdx = text.indexOf("newContent");
+        if (newIdx == -1) newIdx = text.indexOf("\"new\"");
+        if (newIdx >= 0 && newIdx != oldIdx) {
+            int end = Math.min(newIdx + 1500, text.length());
+            if (!details.isEmpty()) details.append(" | ");
+            details.append(text, newIdx, end);
+        }
+        // 提取文件路径信息
+        int pathIdx = text.indexOf("filePath");
+        if (pathIdx == -1) pathIdx = text.indexOf("\"path\"");
+        if (pathIdx >= 0) {
+            int end = Math.min(pathIdx + 200, text.length());
+            details.insert(0, text.substring(pathIdx, end) + " | ");
+        }
+        // 如果未能提取到结构化信息，回退到截取前 2000 字符
+        if (details.isEmpty()) {
+            return text.substring(0, Math.min(2000, text.length())) + "...[截断]";
+        }
+        return details.toString();
     }
 
     /**

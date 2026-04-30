@@ -26,14 +26,16 @@ public class UpdatePlanTool extends BaseTool {
     @Resource
     private PlanTracker planTracker;
 
-    @Tool("创建或更新任务计划。在开始生成项目或执行修改前，先用此工具列出计划；每完成一个阶段后更新进度。")
+    @Tool("创建或更新任务计划。在开始生成项目或执行修改前，先用此工具列出计划；每完成一个阶段后更新进度。支持通过 deps 声明任务依赖关系。")
     public String updatePlan(
-            @P("计划条目的 JSON 数组，每个条目包含 id（编号）、text（任务描述）、status（pending/in_progress/completed）")
+            @P("计划条目的 JSON 数组，每个条目包含 id（编号）、text（任务描述）、status（pending/in_progress/completed）、deps（依赖的任务 id 列表，可选）")
             List<PlanItem> items,
             @ToolMemoryId Long appId
     ) {
         List<PlanTracker.PlanItem> planItems = items.stream()
-                .map(item -> new PlanTracker.PlanItem(item.id, item.text, item.status))
+                .map(item -> new PlanTracker.PlanItem(
+                        item.id(), item.text(), item.status(),
+                        item.deps() != null ? item.deps() : List.of()))
                 .toList();
         return planTracker.updatePlan(appId, planItems);
     }
@@ -56,6 +58,6 @@ public class UpdatePlanTool extends BaseTool {
     /**
      * LangChain4j 用于反序列化工具参数的内部记录类。
      */
-    public record PlanItem(String id, String text, String status) {
+    public record PlanItem(String id, String text, String status, List<String> deps) {
     }
 }

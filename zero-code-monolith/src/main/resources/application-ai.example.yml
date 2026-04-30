@@ -33,3 +33,14 @@ langchain4j:
     # 其它 OpenAI 兼容供应商如不支持 thinking 参数，请保持为空。
     reasoning-thinking-type: ${ZERO_CODE_REASONING_THINKING_TYPE:}
     reasoning-effort: ${ZERO_CODE_REASONING_EFFORT:}
+
+# 上下文压缩配置
+context-compaction:
+  # 触发自动压缩的 token 估算阈值
+  # 建议设为所用模型最大上下文长度的 80%
+  # 例如：DeepSeek V4-Pro 最大上下文 1M tokens → 800000
+  #       GLM-4 最大上下文 128K tokens → 102400
+  #       Qwen 最大上下文 128K tokens → 102400
+  token-threshold: ${ZERO_CODE_COMPACTION_TOKEN_THRESHOLD:800000}
+  # 送入摘要模型的最大字符数（避免摘要请求本身超长）
+  max-summary-input-chars: ${ZERO_CODE_COMPACTION_MAX_SUMMARY_CHARS:300000}

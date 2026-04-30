@@ -76,6 +76,7 @@
                         'plan-item-completed': item.status === 'completed',
                         'plan-item-active': item.status === 'in_progress',
                       }"
+                      :style="{ paddingLeft: getPlanItemDepth(item, currentPlan) * 20 + 'px' }"
                     >
                       <span class="plan-item-icon">
                         <template v-if="item.status === 'completed'">&#10003;</template>
@@ -377,10 +378,25 @@ interface PlanItem {
   id: string
   text: string
   status: string
+  deps?: string[]
 }
 
 // 当前生成计划状态（跨消息保持，用于面板渲染）
 const currentPlan = ref<PlanItem[]>([])
+
+// 根据依赖关系计算每个任务的缩进层级
+const getPlanItemDepth = (item: PlanItem, items: PlanItem[]): number => {
+  if (!item.deps || item.deps.length === 0) return 0
+  const itemMap = new Map(items.map(i => [i.id, i]))
+  let maxDepth = 0
+  for (const depId of item.deps) {
+    const dep = itemMap.get(depId)
+    if (dep) {
+      maxDepth = Math.max(maxDepth, getPlanItemDepth(dep, items) + 1)
+    }
+  }
+  return maxDepth
+}
 
 const messages = ref<Message[]>([])
 const expandedReplies = ref<Set<number>>(new Set())

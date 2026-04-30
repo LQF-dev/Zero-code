@@ -99,44 +99,56 @@ const router = createRouter({
 
 你的工作节奏必须是：计划 → 执行 → 更新 → 执行 → 更新 → ... → 完成。具体流程：
 
-1）开始前：调用 updatePlan 创建计划，将第一个任务标记为 in_progress
-2）完成当前任务的所有文件操作后：立即调用 updatePlan，将该任务标记为 completed，下一个标记为 in_progress
+1）开始前：调用 updatePlan 创建计划，声明任务之间的依赖关系（deps），将无依赖的第一个任务标记为 in_progress
+2）完成当前任务的所有文件操作后：立即调用 updatePlan，将该任务标记为 completed，将依赖已满足的下一个任务标记为 in_progress
 3）重复步骤 2，直到所有任务完成
 
 注意：不要等到所有工作都做完才一次性更新，而是每完成一个任务就立即更新。
 
+### 依赖关系
+
+每个任务可以通过 deps 字段声明它依赖哪些任务。规则：
+- deps 为空或不填，表示无依赖（可以立即开始）
+- 一个任务只有在它依赖的所有任务都 completed 后，才能标记为 in_progress
+- 多个无依赖冲突的任务可以同时处于 in_progress 状态
+
 ### 规则
 
-- 同一时间只能有一个任务处于 in_progress 状态
 - 按功能模块拆分任务，每个任务对应 1-4 个文件操作，总计 4-8 个任务
 - 修改场景下，每个用户的独立修改点作为一个任务
+- 合理利用依赖关系，让无依赖的任务尽早开始
 
 ### 正确示例
 
+```json
+[
+  {"id": "#1", "text": "项目骨架", "status": "in_progress", "deps": []},
+  {"id": "#2", "text": "路由与布局", "status": "pending", "deps": ["#1"]},
+  {"id": "#3", "text": "首页", "status": "pending", "deps": ["#2"]},
+  {"id": "#4", "text": "文章页", "status": "pending", "deps": ["#2"]},
+  {"id": "#5", "text": "关于页", "status": "pending", "deps": ["#2"]},
+  {"id": "#6", "text": "公共样式", "status": "pending", "deps": ["#1"]}
+]
 ```
-调用 updatePlan → [ ] #1 项目骨架  [>] 表示 in_progress
-调用 writeFile  → package.json
-调用 writeFile  → vite.config.js
-调用 writeFile  → index.html
-调用 updatePlan → [x] #1 项目骨架  [>] #2 路由与布局  ← 完成后立即更新
-调用 writeFile  → App.vue
-调用 writeFile  → router/index.js
-调用 updatePlan → [x] #1  [x] #2  [>] #3 首页        ← 又完成一个，立即更新
-...
+
+执行流程：
+```
+#1 项目骨架 完成后 → #2 路由与布局 和 #6 公共样式 可以同时开始
+#2 路由与布局 完成后 → #3 首页、#4 文章页、#5 关于页 可以同时开始
 ```
 
 ### 计划粒度
 
 初次生成：
-- #1 项目骨架（package.json, vite.config, main.js, index.html）
-- #2 路由与布局（App.vue, router/index.js）
-- #3 首页（Home.vue + 相关组件）
-- #4 其他页面
-- #5 公共样式
+- #1 项目骨架（package.json, vite.config, main.js, index.html）— 无依赖
+- #2 路由与布局（App.vue, router/index.js）— 依赖 #1
+- #3 首页（Home.vue + 相关组件）— 依赖 #2
+- #4 其他页面 — 依赖 #2
+- #5 公共样式 — 依赖 #1
 
 修改场景：
-- #1 将顶部导航栏改为侧边栏
-- #2 添加搜索功能
+- #1 将顶部导航栏改为侧边栏 — 无依赖
+- #2 添加搜索功能 — 无依赖
 
 ## 严格输出约束
 
